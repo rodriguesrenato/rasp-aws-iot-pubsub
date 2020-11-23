@@ -17,18 +17,21 @@ configs_aws_iot = {
     intervalStatus: parseInt(process.env.ROBOT_INTERVAL_STATUS),
 }
 
+var i = 0;
 // configure list of topics to be subscribed
-var sub_topic_list = [configs_aws_iot.clientId+'/logs'];
+var sub_topic_list = [configs_aws_iot.clientId+'/logs',configs_aws_iot.clientId+'/status'];
 
 //setup paths to certificates
 var device = awsIot.device(configs_aws_iot);
+
+var statusTimerObj;
 
 device
     .on('connect', function () {
         console.log('>connect');
         for (var i = 0; i < sub_topic_list.length; i++) {
             device.subscribe(sub_topic_list[i]);
-            console.log("subscribed to topic: " + sub_topic_list[0])
+            console.log("subscribed to topic: " + sub_topic_list[i])
         }
 
         // publish a startup log message
@@ -39,18 +42,22 @@ device
         device.publish(sub_topic_list[0], JSON.stringify({
             message
         }));
+
+        statusTimerObj = setInterval(getSystemParams, configs_aws_iot.intervalStatus);
     });
 
 device
     .on('message', function (topic, payload) {
-        // convert the payload to a JSON object
         console.log('>message');
+
+        // convert the payload to a JSON object and show on console
         var payload = JSON.parse(payload.toString());
         console.log(payload);
     });
 device
     .on('close', function () {
         console.log('>close');
+        clearInterval(statusTimerObj);
     });
 device
     .on('end', function () {
@@ -74,12 +81,14 @@ function getSystemParams() {
 
     var message = {
         client_id: configs_aws_iot.clientId,
-        status: "robot_status"
+        status: "robot_status",
+        index:i
     }
+    i++;
     device.publish(configs_aws_iot.clientId+'/status', JSON.stringify({
         message
     }));
 
 }
 
-setInterval(getSystemParams, intervalStatus);
+// setInterval(getSystemParams, configs_aws_iot.intervalStatus);
