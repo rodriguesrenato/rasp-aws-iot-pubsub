@@ -24,24 +24,7 @@ var configs_aws_iot = {
     offlineQueueing: true,
     offlineQueueMaxSize: 0,
     drainTimeMs: 250,
-    maximumReconnectTimeMs: 10000,
 }
-
-var configs_last_will = {
-    will: {
-        topic: configs_robot.logsTopic,
-        payload: {
-            client_id: configs_aws_iot.clientId,
-            robot_id: configs_robot.robotId,
-        },
-        qos: 1
-    }
-}
-
-configs_aws_iot = {
-    ...configs_aws_iot,
-    configs_last_will
-};
 
 var i = 0;
 // configure list of topics to be subscribed
@@ -124,6 +107,6 @@ function getSystemParams() {
     i++;
     device.publish(configs_robot.statusTopic, JSON.stringify({
         message
-    }));
+    }),{qos:1});
 
 }
