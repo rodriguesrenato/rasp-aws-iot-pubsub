@@ -8,7 +8,8 @@ Raspberry Pi & Linux:
 ```
 yarn install
 ```
-
+* Obs: Make sure you have openssl installed
+`sudo apt-get install libssl-dev`
 ## Usage example
 
 Before run the application, configure `.env` file with your AWS IoT variables and credentials paths, then run:
