@@ -1,5 +1,5 @@
 {
-  "name": "pub-sub-aws-iot-v1",
+  "name": "rasp-aws-iot-pubsub",
   "version": "1.0.0",
   "main": "index.js",
   "author": "Renato Rodrigues",
