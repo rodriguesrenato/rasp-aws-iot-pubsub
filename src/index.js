@@ -8,6 +8,7 @@ var configs_rasp = {
     logsTopic: process.env.RASP_ID + '/logs',
     systemTopic: process.env.RASP_ID + '/system',
     sensorPin: process.env.RASP_BTN_PIN,
+    ledPin: process.env.RASP_LED_PIN,
 }
 
 // Load connection configurations from .env
@@ -32,7 +33,7 @@ var i = 0;
 
 // setup rasp sensor
 rpio.open(configs_rasp.sensorPin, rpio.INPUT, rpio.PULL_UP);
-
+rpio.open(configs_rasp.ledPin, rpio.OUTPUT, rpio.LOW);
 
 // configure list of topics to be subscribed
 var sub_topic_list = [configs_rasp.logsTopic, configs_rasp.systemTopic];
@@ -67,6 +68,14 @@ device
     .on('message', function (topic, payload) {
         console.log('>message');
         var payload = JSON.parse(payload.toString());
+        if (payload.hasOwnProperty('switch')){
+            if(payload.switch){
+                rpio.write(LED, rpio.HIGH);
+            }
+            else{
+                rpio.write(LED, rpio.LOW);
+            }
+        }
         console.log(payload);
     });
 
