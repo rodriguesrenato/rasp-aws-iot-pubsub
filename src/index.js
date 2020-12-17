@@ -2,10 +2,10 @@ var awsIot = require('aws-iot-device-sdk');
 const dotenv = require('dotenv').config();
 
 // Load device configurations from .env
-var configs_robot = {
-    robotId: process.env.ROBOT_ID,
-    logsTopic: process.env.ROBOT_ID + '/logs',
-    statusTopic: process.env.ROBOT_ID + '/status',
+var configs_rasp = {
+    raspId: process.env.RASP_ID,
+    logsTopic: process.env.RASP_ID + '/logs',
+    systemTopic: process.env.RASP_ID + '/system',
 }
 
 // Load connection configurations from .env
@@ -16,11 +16,11 @@ var configs_aws_iot = {
     keyPath: process.env.AWS_IOT_PRIVATE_KEY_PATH,
     certPath: process.env.AWS_IOT_CERT_PATH,
     caPath: process.env.AWS_IOT_CA_PATH,
-    clientId: configs_robot.robotId + "__" + Math.floor(new Date().getTime() / 1000).toString(),
+    clientId: configs_rasp.raspId + "__" + Math.floor(new Date().getTime() / 1000).toString(),
     region: process.env.AWS_IOT_REGION,
     host: process.env.AWS_IOT_ENDPOINT,
     keepalive: parseInt(process.env.AWS_IOT_KEEPALIVE),
-    intervalStatus: parseInt(process.env.ROBOT_INTERVAL_STATUS),
+    intervalStatus: parseInt(process.env.RASP_INTERVAL_STATUS),
     offlineQueueing: true,
     offlineQueueMaxSize: 0,
     drainTimeMs: 250,
@@ -28,7 +28,7 @@ var configs_aws_iot = {
 
 var i = 0;
 // configure list of topics to be subscribed
-var sub_topic_list = [configs_robot.logsTopic, configs_robot.statusTopic];
+var sub_topic_list = [configs_rasp.logsTopic, configs_rasp.systemTopic];
 
 //setup paths to certificates
 var device = awsIot.device(configs_aws_iot);
@@ -46,10 +46,10 @@ device
         // publish a startup log message
         var message = {
             client_id: configs_aws_iot.clientId,
-            robot_id: configs_robot.robotId,
+            rasp_id: configs_rasp.raspId,
             status: "connected"
         }
-        device.publish(configs_robot.logsTopic, JSON.stringify({
+        device.publish(configs_rasp.logsTopic, JSON.stringify({
             message
         }));
 
@@ -100,12 +100,12 @@ function getSystemParams() {
 
     var message = {
         client_id: configs_aws_iot.clientId,
-        robot_id: configs_robot.robotId,
-        status: "robot_status",
+        rasp_id: configs_rasp.raspId,
+        status: "rasp_status",
         index: i
     }
     i++;
-    device.publish(configs_robot.statusTopic, JSON.stringify({
+    device.publish(configs_rasp.systemTopic, JSON.stringify({
         message
     }),{qos:1});
 
