@@ -1,11 +1,13 @@
 var awsIot = require('aws-iot-device-sdk');
 const dotenv = require('dotenv').config();
+var rpio = require('rpio'); 
 
 // Load device configurations from .env
 var configs_rasp = {
     raspId: process.env.RASP_ID,
     logsTopic: process.env.RASP_ID + '/logs',
     systemTopic: process.env.RASP_ID + '/system',
+    sensorPin: process.env.RASP_BTN_PIN,
 }
 
 // Load connection configurations from .env
@@ -27,6 +29,11 @@ var configs_aws_iot = {
 }
 
 var i = 0;
+
+// setup rasp sensor
+rpio.open(configs_rasp.sensorPin, rpio.INPUT, rpio.PULL_UP);
+
+
 // configure list of topics to be subscribed
 var sub_topic_list = [configs_rasp.logsTopic, configs_rasp.systemTopic];
 
@@ -98,13 +105,20 @@ device
 function getSystemParams() {
     console.log('>>getSystemParams');
 
+    // read sensor and add it to the message 
+    var sensorStatus = rpio.read(configs_rasp.sensorPin);
+
     var message = {
         client_id: configs_aws_iot.clientId,
         rasp_id: configs_rasp.raspId,
         status: "rasp_status",
-        index: i
+        index: i,
+        sensorStatus: sensorStatus,
     }
+
     i++;
+
+    // publish to system topic
     device.publish(configs_rasp.systemTopic, JSON.stringify({
         message
     }),{qos:1});
