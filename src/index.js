@@ -1,6 +1,6 @@
 var awsIot = require('aws-iot-device-sdk');
 const dotenv = require('dotenv').config();
-var rpio = require('rpio'); 
+var rpio = require('rpio');
 var wifi = require('node-wifi');
 
 // Initialize node-wifi package on random iface
@@ -37,9 +37,11 @@ var configs_aws_iot = {
 
 var i = 0;
 
-// setup rasp sensor
+// setup rasp sensor and initalize Led off
 rpio.open(configs_rasp.sensorPin, rpio.INPUT, rpio.PULL_UP);
 rpio.open(configs_rasp.ledPin, rpio.OUTPUT, rpio.LOW);
+rpio.write(configs_rasp.ledPin, rpio.LOW);
+
 
 // configure list of topics to be subscribed
 var sub_topic_list = [configs_rasp.logsTopic, configs_rasp.systemTopic];
@@ -49,14 +51,15 @@ var device = awsIot.device(configs_aws_iot);
 
 var statusTimerObj;
 
-async function getSSID(){
+var ledStatus = 0;
+
+async function getSSID() {
     var error;
     var wifiSsid;
-    error,wifiSsid = await wifi.getCurrentConnections() ;
+    error, wifiSsid = await wifi.getCurrentConnections();
 
     return wifiSsid[0]["ssid"];
 }
-
 
 async function getSystemParams() {
     console.log('>>getSystemParams');
@@ -71,7 +74,7 @@ async function getSystemParams() {
         index: i,
         sensorStatus: sensorStatus,
         ledStatus: ledStatus,
-        wifiSsid: await getSSID() ,        
+        wifiSsid: await getSSID(),
     }
 
     // sum up message index
@@ -83,6 +86,27 @@ async function getSystemParams() {
     }), { qos: 1 });
 }
 
+async function logStartup() {
+    console.log('>>logStartup');
+
+    // read sensor and add it to the message 
+    var sensorStatus = rpio.read(configs_rasp.sensorPin);
+
+    var message = {
+        client_id: configs_aws_iot.clientId,
+        rasp_id: configs_rasp.raspId,
+        status: "connected",
+        sensorStatus: sensorStatus,
+        wifiSsid: await getSSID(),
+    }
+
+    // publish to log topic
+    device.publish(configs_rasp.logsTopic, JSON.stringify({
+        message
+    }));
+}
+
+
 device
     .on('connect', function () {
         console.log('>connect');
@@ -92,15 +116,7 @@ device
         }
 
         // publish a startup log message
-        var message = {
-            client_id: configs_aws_iot.clientId,
-            rasp_id: configs_rasp.raspId,
-            status: "connected",
-
-        }
-        device.publish(configs_rasp.logsTopic, JSON.stringify({
-            message
-        }));
+        logStartup();
 
         statusTimerObj = setInterval(getSystemParams, configs_aws_iot.intervalStatus);
     });
@@ -111,12 +127,12 @@ device
         var payload = JSON.parse(payload.toString());
         if (payload.hasOwnProperty('switch')) {
             if (payload.switch) {
-                rpio.write(LED, rpio.HIGH);
-                ledStatus=1;
+                rpio.write(configs_rasp.ledPin, rpio.HIGH);
+                ledStatus = 1;
             }
             else {
-                rpio.write(LED, rpio.LOW);
-                ledStatus=0;
+                rpio.write(configs_rasp.ledPin, rpio.LOW);
+                ledStatus = 0;
             }
         }
         console.log(payload);
