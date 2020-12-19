@@ -1,6 +1,9 @@
 var awsIot = require('aws-iot-device-sdk');
 const dotenv = require('dotenv').config();
-var rpio = require('rpio'); 
+var wifi = require('node-wifi');
+
+
+// var rpio = require('rpio'); 
 
 // Load device configurations from .env
 var configs_rasp = {
@@ -32,8 +35,8 @@ var configs_aws_iot = {
 var i = 0;
 
 // setup rasp sensor
-rpio.open(configs_rasp.sensorPin, rpio.INPUT, rpio.PULL_UP);
-rpio.open(configs_rasp.ledPin, rpio.OUTPUT, rpio.LOW);
+// rpio.open(configs_rasp.sensorPin, rpio.INPUT, rpio.PULL_UP);
+// rpio.open(configs_rasp.ledPin, rpio.OUTPUT, rpio.LOW);
 
 // configure list of topics to be subscribed
 var sub_topic_list = [configs_rasp.logsTopic, configs_rasp.systemTopic];
@@ -68,12 +71,12 @@ device
     .on('message', function (topic, payload) {
         console.log('>message');
         var payload = JSON.parse(payload.toString());
-        if (payload.hasOwnProperty('switch')){
-            if(payload.switch){
-                rpio.write(LED, rpio.HIGH);
+        if (payload.hasOwnProperty('switch')) {
+            if (payload.switch) {
+                // rpio.write(LED, rpio.HIGH);
             }
-            else{
-                rpio.write(LED, rpio.LOW);
+            else {
+                // rpio.write(LED, rpio.LOW);
             }
         }
         console.log(payload);
@@ -111,11 +114,29 @@ device
         console.log('>error', error);
     });
 
-function getSystemParams() {
+// Initialize node-wifi package on random iface
+wifi.init({
+    iface: null
+});
+
+
+var wifiSsid = "not_connected";
+
+async function getSystemParams() {
     console.log('>>getSystemParams');
 
     // read sensor and add it to the message 
-    var sensorStatus = rpio.read(configs_rasp.sensorPin);
+    var sensorStatus = 0;//rpio.read(configs_rasp.sensorPin);
+
+    wifi.getCurrentConnections((error, currentConnections) => {
+        if (error) {
+            console.log(error);
+        } else {
+            console.log(currentConnections[0]["ssid"]);
+            wifiSsid = currentConnections[0]["ssid"];
+            
+        }
+    });
 
     var message = {
         client_id: configs_aws_iot.clientId,
@@ -123,6 +144,7 @@ function getSystemParams() {
         status: "rasp_status",
         index: i,
         sensorStatus: sensorStatus,
+        wifiSsid: wifiSsid,        
     }
 
     i++;
@@ -130,6 +152,6 @@ function getSystemParams() {
     // publish to system topic
     device.publish(configs_rasp.systemTopic, JSON.stringify({
         message
-    }),{qos:1});
+    }), { qos: 1 });
 
 }
