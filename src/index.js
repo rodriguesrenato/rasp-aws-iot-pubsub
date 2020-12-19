@@ -49,6 +49,40 @@ var device = awsIot.device(configs_aws_iot);
 
 var statusTimerObj;
 
+async function getSSID(){
+    var error;
+    var wifiSsid;
+    error,wifiSsid = await wifi.getCurrentConnections() ;
+
+    return wifiSsid[0]["ssid"];
+}
+
+
+async function getSystemParams() {
+    console.log('>>getSystemParams');
+
+    // read sensor and add it to the message 
+    var sensorStatus = rpio.read(configs_rasp.sensorPin);
+
+    var message = {
+        client_id: configs_aws_iot.clientId,
+        rasp_id: configs_rasp.raspId,
+        status: "rasp_status",
+        index: i,
+        sensorStatus: sensorStatus,
+        ledStatus: ledStatus,
+        wifiSsid: await getSSID() ,        
+    }
+
+    // sum up message index
+    i++;
+
+    // publish to system topic
+    device.publish(configs_rasp.systemTopic, JSON.stringify({
+        message
+    }), { qos: 1 });
+}
+
 device
     .on('connect', function () {
         console.log('>connect');
@@ -61,7 +95,8 @@ device
         var message = {
             client_id: configs_aws_iot.clientId,
             rasp_id: configs_rasp.raspId,
-            status: "connected"
+            status: "connected",
+
         }
         device.publish(configs_rasp.logsTopic, JSON.stringify({
             message
@@ -77,9 +112,11 @@ device
         if (payload.hasOwnProperty('switch')) {
             if (payload.switch) {
                 rpio.write(LED, rpio.HIGH);
+                ledStatus=1;
             }
             else {
                 rpio.write(LED, rpio.LOW);
+                ledStatus=0;
             }
         }
         console.log(payload);
@@ -116,38 +153,3 @@ device
     .on('error', function (error) {
         console.log('>error', error);
     });
-
-
-
-async function getSSID(){
-    var error;
-    var wifiSsid;
-    error,wifiSsid = await wifi.getCurrentConnections() ;
-
-    return wifiSsid[0]["ssid"];
-}
-
-async function getSystemParams() {
-    console.log('>>getSystemParams');
-
-    // read sensor and add it to the message 
-    var sensorStatus = rpio.read(configs_rasp.sensorPin);
-
-    var message = {
-        client_id: configs_aws_iot.clientId,
-        rasp_id: configs_rasp.raspId,
-        status: "rasp_status",
-        index: i,
-        sensorStatus: sensorStatus,
-        wifiSsid: await getSSID() ,        
-    }
-
-    // sum up message index
-    i++;
-
-    // publish to system topic
-    device.publish(configs_rasp.systemTopic, JSON.stringify({
-        message
-    }), { qos: 1 });
-
-}
