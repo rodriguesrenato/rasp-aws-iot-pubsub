@@ -60,12 +60,12 @@ var statusTimerObj;
 var ledStatus = 0;
 var sensorStatus = -1;
 
-async function getSSID() {
+async function getConnectionInfo() {
     var error;
-    var wifiSsid;
-    error, wifiSsid = await wifi.getCurrentConnections();
+    var connections;
+    error, connections = await wifi.getCurrentConnections();
 
-    return wifiSsid[0]["ssid"];
+    return connections[0];
 }
 
 async function getSystemParams() {
@@ -75,6 +75,9 @@ async function getSystemParams() {
     if (IsRunningOnRasp) {
         sensorStatus = rpio.read(configs_rasp.sensorPin);
     }
+
+    var connection = await getConnectionInfo();
+
     var message = {
         client_id: configs_aws_iot.clientId,
         rasp_id: configs_rasp.raspId,
@@ -82,7 +85,9 @@ async function getSystemParams() {
         index: i,
         sensorStatus: sensorStatus,
         ledStatus: ledStatus,
-        wifiSsid: await getSSID(),
+        wifiSsid: connection['wifi'],
+        wifiSignalLevel: connection['signal_level'],
+        wifiQuality: connection['quality'],
     }
 
     // sum up message index
@@ -102,12 +107,16 @@ async function logStartup() {
         sensorStatus = rpio.read(configs_rasp.sensorPin);
     }
 
+    var connection = await getConnectionInfo();
+
     var message = {
         client_id: configs_aws_iot.clientId,
         rasp_id: configs_rasp.raspId,
         status: "connected",
         sensorStatus: sensorStatus,
-        wifiSsid: await getSSID(),
+        wifiSsid: connection['wifi'],
+        wifiSignalLevel: connection['signal_level'],
+        wifiQuality: connection['quality'],
     }
 
     // publish to log topic
