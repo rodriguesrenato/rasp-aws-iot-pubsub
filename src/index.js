@@ -1,12 +1,17 @@
 var awsIot = require('aws-iot-device-sdk');
 const dotenv = require('dotenv').config();
-var rpio = require('rpio');
 var wifi = require('node-wifi');
 
 // Initialize node-wifi package on random iface
 wifi.init({
     iface: null
 });
+
+IsRunningOnRasp = (process.env.ON_RASP == 'true');
+
+if (IsRunningOnRasp) {
+    var rpio = require('rpio');
+}
 
 // Load device configurations from .env
 var configs_rasp = {
@@ -38,10 +43,11 @@ var configs_aws_iot = {
 var i = 0;
 
 // setup rasp sensor and initalize Led off
-rpio.open(configs_rasp.sensorPin, rpio.INPUT, rpio.PULL_UP);
-rpio.open(configs_rasp.ledPin, rpio.OUTPUT, rpio.LOW);
-rpio.write(configs_rasp.ledPin, rpio.LOW);
-
+if (IsRunningOnRasp) {
+    rpio.open(configs_rasp.sensorPin, rpio.INPUT, rpio.PULL_UP);
+    rpio.open(configs_rasp.ledPin, rpio.OUTPUT, rpio.LOW);
+    rpio.write(configs_rasp.ledPin, rpio.LOW);
+}
 
 // configure list of topics to be subscribed
 var sub_topic_list = [configs_rasp.logsTopic, configs_rasp.systemTopic];
@@ -52,6 +58,7 @@ var device = awsIot.device(configs_aws_iot);
 var statusTimerObj;
 
 var ledStatus = 0;
+var sensorStatus = -1;
 
 async function getSSID() {
     var error;
@@ -65,8 +72,9 @@ async function getSystemParams() {
     console.log('>>getSystemParams');
 
     // read sensor and add it to the message 
-    var sensorStatus = rpio.read(configs_rasp.sensorPin);
-
+    if (IsRunningOnRasp) {
+        sensorStatus = rpio.read(configs_rasp.sensorPin);
+    }
     var message = {
         client_id: configs_aws_iot.clientId,
         rasp_id: configs_rasp.raspId,
@@ -89,8 +97,10 @@ async function getSystemParams() {
 async function logStartup() {
     console.log('>>logStartup');
 
-    // read sensor and add it to the message 
-    var sensorStatus = rpio.read(configs_rasp.sensorPin);
+    // read sensor and add it to the message
+    if (IsRunningOnRasp) {
+        sensorStatus = rpio.read(configs_rasp.sensorPin);
+    }
 
     var message = {
         client_id: configs_aws_iot.clientId,
@@ -126,14 +136,15 @@ device
         console.log('>message');
         var payload = JSON.parse(payload.toString());
         if (payload.hasOwnProperty('switch')) {
-            if (payload.switch) {
-                rpio.write(configs_rasp.ledPin, rpio.HIGH);
-                ledStatus = 1;
+            if (IsRunningOnRasp) {
+                if (payload.switch) {
+                    rpio.write(configs_rasp.ledPin, rpio.HIGH);
+                }
+                else {
+                    rpio.write(configs_rasp.ledPin, rpio.LOW);
+                }
             }
-            else {
-                rpio.write(configs_rasp.ledPin, rpio.LOW);
-                ledStatus = 0;
-            }
+            ledStatus = payload.switch;
         }
         console.log(payload);
     });
