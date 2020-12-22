@@ -1,5 +1,6 @@
 var awsIot = require('aws-iot-device-sdk');
 const dotenv = require('dotenv').config();
+const say = require('say')
 var wifi = require('node-wifi');
 
 // Initialize node-wifi package on random iface
@@ -8,9 +9,14 @@ wifi.init({
 });
 
 IsRunningOnRasp = (process.env.ON_RASP == 'true');
+toSpeak = (process.env.TO_SPEAK == 'true');
 
 if (IsRunningOnRasp) {
     var rpio = require('rpio');
+}
+
+if (toSpeak) {
+    const say = require('say')
 }
 
 // Load device configurations from .env
@@ -125,7 +131,6 @@ async function logStartup() {
     }));
 }
 
-
 device
     .on('connect', function () {
         console.log('>connect');
@@ -136,7 +141,9 @@ device
 
         // publish a startup log message
         logStartup();
-
+        if(toSpeak){
+            say.speak("Connected to AWS");
+        }
         statusTimerObj = setInterval(getSystemParams, configs_aws_iot.intervalStatus);
     });
 
@@ -154,6 +161,9 @@ device
                 }
             }
             ledStatus = payload.switch;
+            if(toSpeak){
+                say.speak("Led is" + ledStatus ? "on" : "off");
+            }
         }
         console.log(payload);
     });
