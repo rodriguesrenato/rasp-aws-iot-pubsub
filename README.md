@@ -10,6 +10,8 @@ yarn install
 ```
 * Obs: Make sure you have openssl installed
 `sudo apt-get install libssl-dev`
+* If you want to use voice feature on received messages:
+`sudo apt-get install festival festvox-kallpc16k`
 ## Usage example
 
 Before run the application, configure `.env` file with your AWS IoT variables and credentials paths, then run:
